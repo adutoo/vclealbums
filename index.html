@@ -101,12 +101,10 @@
     const CLOUD_NAME = "dpw09bhnh";
     const UPLOAD_PRESET = "ml_default";
 
-    // Paytm configuration
+    // Minimal Paytm front-end config: backend endpoint + optional dev simulation
     const PAYTM = {
-      MID: "YOUR_MID_HERE",                       // <-- put your Paytm MID here
-      ENV: "STAGE",                               // "PROD" or "STAGE"
-      CREATE_ORDER_API: "https://yourserver.example.com/createPaytmOrder", // <-- your server endpoint (Initiate Transaction)
-      USE_DEV_FAKE_PAYMENTS: true                 // true = simulate success for testing; set to false when going live
+      CREATE_ORDER_API: "/api/createPaytmOrder", // Vercel serverless function
+      USE_DEV_FAKE_PAYMENTS: false               // set true to simulate success
     };
 
     // INR Plans
@@ -406,12 +404,12 @@
     function loadPaytmScript(mid, env='PROD'){
       return new Promise((resolve, reject)=>{
         if (window.Paytm && window.Paytm.CheckoutJS) return resolve();
-        const script = document.createElement('script');
         const host = env==='PROD' ? 'https://securegw.paytm.in' : 'https://securegw-stage.paytm.in';
-        script.src = `${host}/merchantpgpui/checkoutjs/merchants/${mid}.js`;
-        script.onload = ()=> resolve();
-        script.onerror = ()=> reject(new Error('Failed to load Paytm CheckoutJS'));
-        document.body.appendChild(script);
+        const s = document.createElement('script');
+        s.src = `${host}/merchantpgpui/checkoutjs/merchants/${mid}.js`;
+        s.onload = ()=> resolve();
+        s.onerror = ()=> reject(new Error('Failed to load Paytm CheckoutJS'));
+        document.body.appendChild(s);
       });
     }
 
@@ -423,12 +421,11 @@
         data: { orderId, token: txnToken, tokenType: "TXN_TOKEN", amount: String(amount) },
         merchant: { mid, redirect: false },
         handler: {
-          transactionStatus: function(data){
-            // data.STATUS === 'TXN_SUCCESS' on success
+          transactionStatus: function (data) {
             if (data && (data.STATUS === 'TXN_SUCCESS' || data.status === 'TXN_SUCCESS')) onSuccess?.(data);
             else onFailure?.(data);
           },
-          notifyMerchant: function(eventName, data){ console.log("notifyMerchant", eventName, data); }
+          notifyMerchant: function (eventName, data) { console.log("notifyMerchant", eventName, data); }
         }
       };
       await window.Paytm.CheckoutJS.init(config);
@@ -1175,17 +1172,15 @@
       );
     };
 
-    /* ------------------ Pricing (Paytm integrated) ------------------ */
+    /* ------------------ Pricing (Paytm integrated with backend) ------------------ */
     const PricingScreen = ({ user, userData, onPlanChange }) => {
       const [loading, setLoading] = useState(false);
       const activeKey = effectivePlanKey(userData);
       const activePlan = PLANS[activeKey];
       const activeExpiry = userData?.planExpiry ? (userData.planExpiry.toDate ? userData.planExpiry.toDate() : new Date(userData.planExpiry)) : null;
 
-      // Expose buy flow
       const purchasePlan = async (planKey) => {
         if (planKey === 'free') {
-          // Switch to free immediately (cancels subscription effect)
           setLoading(true);
           await updateDoc(doc(db,'users', user.uid), { plan:'free', planExpiry: null });
           onPlanChange('free');
@@ -1196,7 +1191,7 @@
 
         const amount = PLANS[planKey].priceRs;
 
-        // Dev / test mode
+        // Dev mode simulation (optional)
         if (PAYTM.USE_DEV_FAKE_PAYMENTS) {
           if (confirm(`(DEV MODE) Simulate successful payment of ${rupee(amount)} for ${PLANS[planKey].name}?`)) {
             setLoading(true);
@@ -1208,20 +1203,15 @@
           return;
         }
 
-        // Live Paytm flow — requires your server endpoint to create order & txnToken
-        if (!PAYTM.MID || !PAYTM.CREATE_ORDER_API) {
-          alert('Paytm is not configured. Please set PAYTM.MID and PAYTM.CREATE_ORDER_API in the code.');
-          return;
-        }
-
+        // LIVE: call backend to create order, then open Paytm CheckoutJS
         try {
           setLoading(true);
-          // 1) Ask your server to create the order and get txnToken
+
+          // 1) Create order on your Vercel serverless function
           const res = await fetch(PAYTM.CREATE_ORDER_API, {
             method:'POST',
             headers:{ 'Content-Type':'application/json' },
             body: JSON.stringify({
-              mid: PAYTM.MID,
               amount,
               planKey,
               customerId: user.uid,
@@ -1229,13 +1219,13 @@
             })
           });
           if (!res.ok) throw new Error('Failed to create Paytm order');
-          const { orderId, txnToken } = await res.json();
-          if (!orderId || !txnToken) throw new Error('Invalid Paytm order response');
+          const { orderId, txnToken, mid, env } = await res.json();
+          if (!orderId || !txnToken || !mid) throw new Error('Invalid Paytm order response');
 
           // 2) Start Paytm Checkout
           await startPaytmCheckout({
-            mid: PAYTM.MID,
-            env: PAYTM.ENV,
+            mid,
+            env,
             orderId,
             amount,
             txnToken,
@@ -1250,6 +1240,7 @@
               setLoading(false);
             }
           });
+
         } catch (e) {
           console.error(e);
           alert('Payment setup failed. Please try again.');
@@ -1298,7 +1289,7 @@
 
           {PAYTM.USE_DEV_FAKE_PAYMENTS && (
             <p className="mt-6 text-sm text-amber-600 text-center">
-              Dev mode: payments are simulated. Set <code>PAYTM.USE_DEV_FAKE_PAYMENTS=false</code>, configure <code>MID</code> and <code>CREATE_ORDER_API</code> to go live.
+              Dev mode: payments are simulated. Set <code>PAYTM.USE_DEV_FAKE_PAYMENTS=false</code> and deploy your backend <code>/api/createPaytmOrder</code> with Paytm env vars to go live.
             </p>
           )}
         </div>
