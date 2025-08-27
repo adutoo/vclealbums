@@ -1,58 +1,94 @@
-import https from "https";
+// /api/createPaytmOrder.js
+// POST JSON: { amount: 999, planKey: "premium", customerId: "uid", customerEmail: "a@b.com" }
+// Returns: { orderId, txnToken, amount, env, mid }
 
-export default function handler(req, res) {
-  if (req.method !== "POST") {
-    return res.status(405).json({ error: "Method not allowed" });
+const PaytmChecksum = require("paytmchecksum");
+
+const {
+  PAYTM_ENV = "STAGE",      // "STAGE" or "PROD"
+  PAYTM_MID,                // Paytm Merchant ID
+  PAYTM_MKEY,               // Paytm Merchant Key (secret)
+  PAYTM_WEBSITE = "DEFAULT",
+  BASE_URL = ""             // optional - used for callback URL
+} = process.env;
+
+const send = (res, status, data) => {
+  res.statusCode = status;
+  res.setHeader("Content-Type", "application/json");
+  res.end(JSON.stringify(data));
+};
+
+const allowCors = (fn) => async (req, res) => {
+  res.setHeader("Access-Control-Allow-Credentials", "true");
+  res.setHeader("Access-Control-Allow-Origin", "*");
+  res.setHeader("Access-Control-Allow-Methods", "GET,OPTIONS,POST");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  if (req.method === "OPTIONS") return send(res, 200, { ok: true });
+  return await fn(req, res);
+};
+
+module.exports = allowCors(async (req, res) => {
+  try {
+    if (req.method !== "POST") return send(res, 405, { error: "Method not allowed" });
+    if (!PAYTM_MID || !PAYTM_MKEY) return send(res, 500, { error: "Paytm not configured" });
+
+    const { amount, customerId, customerEmail } = await readBody(req);
+    if (!amount || isNaN(Number(amount))) return send(res, 400, { error: "Invalid amount" });
+
+    const orderId = `ORD_${Date.now()}_${Math.floor(Math.random() * 1e6)}`;
+    const host = PAYTM_ENV === "PROD" ? "https://securegw.paytm.in" : "https://securegw-stage.paytm.in";
+
+    const body = {
+      requestType: "Payment",
+      mid: PAYTM_MID,
+      websiteName: PAYTM_WEBSITE,
+      orderId,
+      callbackUrl: BASE_URL ? `${BASE_URL}/api/paytmCallback` : undefined, // optional
+      txnAmount: { value: String(Number(amount).toFixed(2)), currency: "INR" },
+      userInfo: {
+        custId: String(customerId || customerEmail || "guest"),
+        email: customerEmail || undefined,
+      },
+    };
+
+    const signature = await PaytmChecksum.generateSignature(JSON.stringify(body), PAYTM_MKEY);
+
+    const initUrl = `${host}/theia/api/v1/initiateTransaction?mid=${PAYTM_MID}&orderId=${orderId}`;
+    const resp = await fetch(initUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "signature": signature },
+      body: JSON.stringify(body),
+    });
+
+    if (!resp.ok) {
+      const text = await resp.text().catch(() => "");
+      return send(res, 502, { error: "Failed to reach Paytm", detail: text });
+    }
+    const data = await resp.json();
+    const resultStatus = data?.body?.resultInfo?.resultStatus;
+    const txnToken = data?.body?.txnToken;
+
+    if (resultStatus !== "S" || !txnToken) {
+      return send(res, 400, {
+        error: "Paytm initiateTransaction failed",
+        result: data?.body?.resultInfo
+      });
+    }
+
+    send(res, 200, { orderId, txnToken, amount: Number(amount).toFixed(2), env: PAYTM_ENV, mid: PAYTM_MID });
+  } catch (err) {
+    console.error("createPaytmOrder error:", err);
+    send(res, 500, { error: "Server error", detail: err.message });
   }
+});
 
-  const { mid, amount, planKey, customerId, customerEmail } = req.body;
-
-  // 👇 Replace with your own Paytm merchant key
-  const merchantKey = process.env.PAYTM_MKEY;
-
-  const orderId = "ORDER" + Date.now();
-
-  const paytmParams = {
-    requestType: "Payment",
-    mid,
-    websiteName: "DEFAULT",
-    orderId,
-    callbackUrl: "https://securegw-stage.paytm.in/theia/paytmCallback?ORDER_ID=" + orderId,
-    txnAmount: { value: String(amount), currency: "INR" },
-    userInfo: { custId: customerId, email: customerEmail }
-  };
-
-  const post_data = JSON.stringify(paytmParams);
-
-  const options = {
-    hostname: "securegw-stage.paytm.in",
-    port: 443,
-    path: `/theia/api/v1/initiateTransaction?mid=${mid}&orderId=${orderId}`,
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json",
-      "Content-Length": post_data.length,
-    },
-  };
-
-  const request = https.request(options, function (response) {
+function readBody(req) {
+  return new Promise((resolve, reject) => {
     let data = "";
-    response.on("data", chunk => { data += chunk; });
-    response.on("end", () => {
-      try {
-        const result = JSON.parse(data);
-        res.status(200).json({ orderId, txnToken: result.body.txnToken });
-      } catch (err) {
-        res.status(500).json({ error: "Failed to parse Paytm response" });
-      }
+    req.on("data", (c) => (data += c));
+    req.on("end", () => {
+      try { resolve(data ? JSON.parse(data) : {}); }
+      catch (e) { reject(e); }
     });
   });
-
-  request.on("error", (err) => {
-    console.error(err);
-    res.status(500).json({ error: "Paytm API request failed" });
-  });
-
-  request.write(post_data);
-  request.end();
 }
