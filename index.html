@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>E-Album Creator</title>
 
   <!-- Tailwind CSS -->
@@ -31,10 +31,7 @@
     .fade-in{ animation: fadeIn .35s ease-out }
     .nav-glass { backdrop-filter: blur(10px); background: rgba(255,255,255,.75); }
     .dark .nav-glass { background: rgba(2,6,23,.6); }
-
-    /* Flipbook sizing */
-    .flipbook-wrap { position: relative; width: 100%; display:flex; justify-content:center; }
-    .flipbook-container { width: 90vw; height: 70vh; max-width: 1200px; max-height: 680px; } /* desktop */
+    .flipbook-container { width: 90vw; height: 70vh; max-width: 1200px; max-height: 600px; }
     .flip-page { background:#f8fafc; box-shadow:0 0 20px rgba(0,0,0,.2); display:flex; align-items:center; justify-content:center; }
     .flip-page img{ max-width:100%; max-height:100%; object-fit:contain }
     .cover-page{ background:#1e293b; color:#fff; display:flex; align-items:center; justify-content:center; text-align:center; padding:2rem }
@@ -42,32 +39,6 @@
     .dark .cover-page{ background:#0f172a }
     .dragging{ opacity:.5; transform: scale(.97) }
     .floating-btn { box-shadow: 0 10px 30px rgba(99,102,241,.3); }
-
-    /* ⬅️ UPDATED: Mobile polish */
-    @media (max-width: 767px) {
-      .flipbook-container { width: 98vw; height: 68vh; max-height: 68vh; }
-      .mobile-pad { padding-left: .75rem; padding-right: .75rem; }
-      .mobile-card { border-radius: 1rem; }
-      .mobile-btn { height: 48px; border-radius: 12px; }
-      .grid-tight { gap: .75rem; }
-    }
-
-    /* ⬅️ NEW: Landscape prompt overlay on phones */
-    .rotate-overlay {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,.6);
-      display: flex; align-items:center; justify-content:center;
-      z-index: 60;
-    }
-    .rotate-box {
-      width: min(92vw, 480px);
-      background: white;
-      border-radius: 16px;
-      padding: 20px;
-      text-align: center;
-      box-shadow: 0 10px 40px rgba(0,0,0,.35);
-    }
-    .dark .rotate-box { background: #0b1220; }
   </style>
 </head>
 
@@ -126,16 +97,17 @@
     } = window.firebaseServices;
 
     /* ------------------ Payment / Plans Config ------------------ */
+    // Cloudinary for uploads
     const CLOUD_NAME = "dpw09bhnh";
     const UPLOAD_PRESET = "ml_default";
 
+    // Minimal Paytm front-end config: backend endpoint + optional dev simulation
     const PAYTM = {
-      MID: "YOUR_MID_HERE",
-      ENV: "STAGE",
-      CREATE_ORDER_API: "/api/createPaytmOrder",
-      USE_DEV_FAKE_PAYMENTS: true
+      CREATE_ORDER_API: "/api/createPaytmOrder", // Vercel serverless function
+      USE_DEV_FAKE_PAYMENTS: false               // set true to simulate success
     };
 
+    // INR Plans
     const PLANS = {
       free:     { name:'Free',     limit:2,   priceRs:0,   features:{ qrDownload:false, customMusic:false, editSheets:false, support:false, passwordProtection:false, socialLinks:false, showLabName:false } },
       basic:    { name:'Basic',    limit:40,  priceRs:299, features:{ qrDownload:true,  customMusic:false, editSheets:false, support:false, passwordProtection:false, socialLinks:false, showLabName:true  } },
@@ -149,6 +121,7 @@
       { name:'Happy Upbeat Acoustic',      url:'https://res.cloudinary.com/dpw09bhnh/video/upload/v1693064531/bensound-happy-upbeat-acoustic_q7b1z2.mp3' },
     ];
 
+    /* ------------------ Small Helpers ------------------ */
     const MaterialIcon = ({name, className=""}) => <span className={`material-icons ${className}`}>{name}</span>;
     const rupee = (n)=> `₹${Number(n).toLocaleString('en-IN')}`;
 
@@ -196,7 +169,7 @@
 
       return (
         <header className="sticky top-0 z-40 nav-glass border-b border-slate-200/60 dark:border-slate-700/60">
-          <div className="max-w-7xl mx-auto px-3 sm:px-4">
+          <div className="max-w-7xl mx-auto px-4">
             <div className="h-16 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <div className="w-9 h-9 rounded-xl bg-indigo-600 text-white grid place-items-center animate-pulse">
@@ -213,21 +186,21 @@
                 <NavBtn id="contact"   label="Contact" icon="call"/>
               </nav>
 
-              <div className="flex items-center gap-1 sm:gap-2" id="profileMenu">
+              <div className="flex items-center gap-2" id="profileMenu">
                 <ThemeToggle theme={theme} onToggle={toggleTheme}/>
                 <button
                   onClick={()=>setMenuOpen(v=>!v)}
-                  className="flex items-center gap-2 px-2 sm:px-3 py-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+                  className="flex items-center gap-2 px-3 py-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition"
                   title={user?.email}
                 >
                   <div className="w-9 h-9 rounded-full bg-gradient-to-tr from-indigo-600 to-fuchsia-500 text-white grid place-items-center">
                     <MaterialIcon name="person"/>
                   </div>
-                  <MaterialIcon name="expand_more" className="hidden sm:block" />
+                  <MaterialIcon name="expand_more" />
                 </button>
 
                 {menuOpen && (
-                  <div className="absolute right-2 sm:right-4 top-14 w-56 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 fade-in">
+                  <div className="absolute right-4 top-14 w-52 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 fade-in">
                     <div className="px-4 py-3 border-b dark:border-slate-700">
                       <p className="text-sm font-medium truncate">{user?.displayName || user?.email}</p>
                     </div>
@@ -242,20 +215,20 @@
               </div>
             </div>
 
-            {/* Mobile quick nav */}
-            <div className="md:hidden pb-3 grid grid-cols-5 gap-2">
-              <button onClick={()=>window.__setView('dashboard')} className={`mobile-btn text-sm ${view==='dashboard'?'bg-indigo-600 text-white':'bg-slate-100 dark:bg-slate-800'}`}>Home</button>
-              <button onClick={()=>window.__setView('uploader')}  className={`mobile-btn text-sm ${view==='uploader' ?'bg-indigo-600 text-white':'bg-slate-100 dark:bg-slate-800'}`}>Create</button>
-              <button onClick={()=>window.__setView('pricing')}   className={`mobile-btn text-sm ${view==='pricing'  ?'bg-indigo-600 text-white':'bg-slate-100 dark:bg-slate-800'}`}>Plans</button>
-              <button onClick={()=>window.__setView('faq')}       className={`mobile-btn text-sm ${view==='faq'      ?'bg-indigo-600 text-white':'bg-slate-100 dark:bg-slate-800'}`}>FAQ</button>
-              <button onClick={()=>window.__setView('contact')}   className={`mobile-btn text-sm ${view==='contact'  ?'bg-indigo-600 text-white':'bg-slate-100 dark:bg-slate-800'}`}>Contact</button>
+            {/* Mobile nav */}
+            <div className="md:hidden pb-3 flex gap-2">
+              <button onClick={()=>window.__setView('dashboard')} className={`flex-1 py-2 rounded-lg ${view==='dashboard'?'bg-indigo-600 text-white':'bg-slate-100 dark:bg-slate-800'}`}>Dashboard</button>
+              <button onClick={()=>window.__setView('uploader')}  className={`flex-1 py-2 rounded-lg ${view==='uploader' ?'bg-indigo-600 text-white':'bg-slate-100 dark:bg-slate-800'}`}>Create</button>
+              <button onClick={()=>window.__setView('pricing')}   className={`flex-1 py-2 rounded-lg ${view==='pricing'  ?'bg-indigo-600 text-white':'bg-slate-100 dark:bg-slate-800'}`}>Pricing</button>
+              <button onClick={()=>window.__setView('faq')}       className={`flex-1 py-2 rounded-lg ${view==='faq'      ?'bg-indigo-600 text-white':'bg-slate-100 dark:bg-slate-800'}`}>FAQ</button>
+              <button onClick={()=>window.__setView('contact')}   className={`flex-1 py-2 rounded-lg ${view==='contact'  ?'bg-indigo-600 text-white':'bg-slate-100 dark:bg-slate-800'}`}>Contact</button>
             </div>
           </div>
         </header>
       );
     };
 
-    /* ------------------ Auth, NewUser, Profile screens (unchanged layout; add mobile paddings) ------------------ */
+    /* ------------------ Auth Screens ------------------ */
     const AuthScreen = () => {
       const [isLogin, setIsLogin] = useState(true);
       const [email, setEmail] = useState('');
@@ -277,45 +250,52 @@
         if (!email || !password) return setError('Please enter both email and password.');
         setLoading(true); setError(''); setResetMsg('');
         try {
-          if (isLogin) await signInWithEmailAndPassword(auth, email, password);
-          else {
+          if (isLogin) {
+            await signInWithEmailAndPassword(auth, email, password);
+          } else {
             const cred = await createUserWithEmailAndPassword(auth, email, password);
             await sendEmailVerification(cred.user);
           }
-        } catch (e) { setError(friendly(e.code)); }
-        finally { setLoading(false); }
+        } catch (e) {
+          setError(friendly(e.code));
+        } finally {
+          setLoading(false);
+        }
       };
 
       const handleGoogle = async () => {
         setLoading(true); setError(''); setResetMsg('');
-        try { await signInWithPopup(auth, new GoogleAuthProvider()); }
-        catch (e) { setError(friendly(e.code)); }
-        finally { setLoading(false); }
+        try {
+          await signInWithPopup(auth, new GoogleAuthProvider());
+        } catch (e) {
+          setError(friendly(e.code));
+        } finally { setLoading(false); }
       };
 
       const handleForgot = async () => {
-        if (!email) return setResetMsg('Enter your email above and tap "Forgot password" again.');
+        if (!email) return setResetMsg('Enter your email above and click "Forgot password" again.');
         setLoading(true); setError(''); setResetMsg('');
-        try { await sendPasswordResetEmail(auth, email); setResetMsg('Password reset link sent! Check your inbox.'); }
-        catch (e) { setError(friendly(e.code)); }
+        try {
+          await sendPasswordResetEmail(auth, email);
+          setResetMsg('Password reset link sent! Check your inbox.');
+        } catch (e) { setError(friendly(e.code)); }
         finally { setLoading(false); }
       };
 
       return (
-        <div className="min-h-screen grid place-items-center p-3 sm:p-4">
+        <div className="min-h-screen grid place-items-center p-4">
           {loading && <Loader text={isLogin?'Signing in…':'Signing up…'} />}
-
-          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-md fade-in mobile-card">
+          <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-8 w-full max-w-md fade-in">
             <div className="text-center">
-              <h1 className="text-2xl sm:text-3xl font-bold">{isLogin?'Welcome Back':'Create Account'}</h1>
-              <p className="mt-1 text-slate-500 text-sm sm:text-base">Sign in to create your albums.</p>
+              <h1 className="text-3xl font-bold">{isLogin?'Welcome Back':'Create Account'}</h1>
+              <p className="mt-1 text-slate-500">Sign in to create your albums.</p>
             </div>
             <div className="mt-6 space-y-4">
               <input type="email" value={email} onChange={e=>setEmail(e.target.value)} placeholder="Email" className="w-full px-4 py-3 border rounded-lg bg-transparent border-slate-300 dark:border-slate-600"/>
               <input type="password" value={password} onChange={e=>setPassword(e.target.value)} placeholder="Password" className="w-full px-4 py-3 border rounded-lg bg-transparent border-slate-300 dark:border-slate-600"/>
               {error && <p className="text-red-500 text-sm">{error}</p>}
               {resetMsg && <p className="text-emerald-500 text-sm">{resetMsg}</p>}
-              <button onClick={handleAuth} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold active:scale-[.99] transition mobile-btn">{isLogin?'Sign In':'Sign Up'}</button>
+              <button onClick={handleAuth} className="w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold active:scale-[.99] transition">{isLogin?'Sign In':'Sign Up'}</button>
               <div className="flex items-center justify-between text-sm">
                 <button onClick={()=>setIsLogin(v=>!v)} className="font-semibold text-indigo-600 dark:text-indigo-400">{isLogin?'Create an account':'Have an account? Sign In'}</button>
                 <button onClick={handleForgot} className="text-slate-600 hover:text-indigo-600">Forgot password?</button>
@@ -325,7 +305,7 @@
                 <span className="text-slate-500 text-sm">OR</span>
                 <div className="flex-1 border-t dark:border-slate-700"></div>
               </div>
-              <button onClick={handleGoogle} className="w-full bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2 mobile-btn">
+              <button onClick={handleGoogle} className="w-full bg-white dark:bg-slate-700 text-slate-800 dark:text-slate-100 border border-slate-300 dark:border-slate-600 py-3 rounded-lg font-semibold flex items-center justify-center gap-2">
                 <MaterialIcon name="login"/> Sign in with Google
               </button>
             </div>
@@ -335,8 +315,8 @@
     };
 
     const VerifyEmailScreen = ({user}) => (
-      <div className="min-h-screen grid place-items-center p-3 sm:p-4">
-        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-6 sm:p-8 w-full max-w-md text-center fade-in mobile-card">
+      <div className="min-h-screen grid place-items-center p-4">
+        <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-xl p-8 w-full max-w-md text-center fade-in">
           <MaterialIcon name="mark_email_read" className="text-6xl text-emerald-500"/>
           <h1 className="text-2xl font-bold mt-4">Verify Your Email</h1>
           <p className="mt-2">We sent a verification link to <strong>{user.email}</strong>.</p>
@@ -349,24 +329,60 @@
       const [step, setStep] = useState(1);
       const [anim, setAnim] = useState('fade-in');
       const [details, setDetails] = useState({ name:user.displayName || '', labName:'', city:'', age:'', gender:'' });
-      const next = () => { setAnim(''); setTimeout(()=>{ setStep(s=>s+1); setAnim('fade-in'); }, 60); };
+
+      const next = () => { setAnim(''); setTimeout(()=>{ setStep(s=>s+1); setAnim('fade-in'); }, 50); };
       const save = async () => { if (!details.gender) return alert('Please select a gender.'); await onComplete(details); };
-      const Box = ({children}) => <div className={`bg-white dark:bg-slate-800 p-6 sm:p-8 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-lg ${anim} mobile-card`}>{children}</div>;
+
+      const Box = ({children}) => <div className={`bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 w-full max-w-lg ${anim}`}>{children}</div>;
+
       return (
-        <div className="min-h-screen grid place-items-center p-3 sm:p-4">
+        <div className="min-h-screen grid place-items-center p-4">
           <Box>
-            {step===1 && (<div><h2 className="text-2xl font-bold text-center mb-4">What's your name?</h2><input value={details.name} onChange={e=>setDetails({...details, name:e.target.value})} placeholder="e.g., John Doe" className="w-full px-4 py-3 border rounded-lg bg-transparent"/><button onClick={next} className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold mobile-btn">Next</button></div>)}
-            {step===2 && (<div><h2 className="text-2xl font-bold text-center mb-4">Your studio/lab name?</h2><input value={details.labName} onChange={e=>setDetails({...details, labName:e.target.value})} placeholder="e.g., John's Photography" className="w-full px-4 py-3 border rounded-lg bg-transparent"/><button onClick={next} className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold mobile-btn">Next</button></div>)}
-            {step===3 && (<div><h2 className="text-2xl font-bold text-center mb-4">Where are you based?</h2><input value={details.city} onChange={e=>setDetails({...details, city:e.target.value})} placeholder="City" className="w-full px-4 py-3 border rounded-lg bg-transparent"/><button onClick={next} className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold mobile-btn">Next</button></div>)}
-            {step===4 && (<div><h2 className="text-2xl font-bold text-center mb-4">How old are you?</h2><input type="number" value={details.age} onChange={e=>setDetails({...details, age:e.target.value})} placeholder="e.g., 25" className="w-full px-4 py-3 border rounded-lg bg-transparent"/><button onClick={next} className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold mobile-btn">Next</button></div>)}
-            {step===5 && (<div><h2 className="text-2xl font-bold text-center mb-4">What's your gender?</h2><div className="flex justify-center gap-3 sm:gap-4">{['male','female','other'].map(g => (<div key={g} onClick={()=>setDetails({...details, gender:g})} className={`flex flex-col items-center p-4 border-2 rounded-lg w-24 sm:w-28 cursor-pointer transition ${details.gender===g?'bg-indigo-600 text-white border-indigo-600':'hover:bg-slate-50 dark:hover:bg-slate-700'}`}><MaterialIcon name={g === 'other' ? 'person' : g} className="text-4xl"/><span className="mt-2 font-medium capitalize">{g==='other'?'Other':g}</span></div>))}</div><button onClick={save} className="mt-6 w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold mobile-btn">Save & Continue</button></div>)}
+            {step===1 && (<div>
+              <h2 className="text-2xl font-bold text-center mb-4">What's your name?</h2>
+              <input value={details.name} onChange={e=>setDetails({...details, name:e.target.value})} placeholder="e.g., John Doe" className="w-full px-4 py-3 border rounded-lg bg-transparent"/>
+              <button onClick={next} className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold">Next</button>
+            </div>)}
+            {step===2 && (<div>
+              <h2 className="text-2xl font-bold text-center mb-4">Your studio/lab name?</h2>
+              <input value={details.labName} onChange={e=>setDetails({...details, labName:e.target.value})} placeholder="e.g., John's Photography" className="w-full px-4 py-3 border rounded-lg bg-transparent"/>
+              <button onClick={next} className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold">Next</button>
+            </div>)}
+            {step===3 && (<div>
+              <h2 className="text-2xl font-bold text-center mb-4">Where are you based?</h2>
+              <input value={details.city} onChange={e=>setDetails({...details, city:e.target.value})} placeholder="City" className="w-full px-4 py-3 border rounded-lg bg-transparent"/>
+              <button onClick={next} className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold">Next</button>
+            </div>)}
+            {step===4 && (<div>
+              <h2 className="text-2xl font-bold text-center mb-4">How old are you?</h2>
+              <input type="number" value={details.age} onChange={e=>setDetails({...details, age:e.target.value})} placeholder="e.g., 25" className="w-full px-4 py-3 border rounded-lg bg-transparent"/>
+              <button onClick={next} className="mt-6 w-full bg-indigo-600 text-white py-3 rounded-lg font-semibold">Next</button>
+            </div>)}
+            {step===5 && (<div>
+              <h2 className="text-2xl font-bold text-center mb-4">What's your gender?</h2>
+              <div className="flex justify-center gap-4">
+                {['male','female','other'].map(g => (
+                  <div key={g} onClick={()=>setDetails({...details, gender:g})}
+                       className={`flex flex-col items-center p-4 border-2 rounded-lg w-28 cursor-pointer transition ${details.gender===g?'bg-indigo-600 text-white border-indigo-600':'hover:bg-slate-50 dark:hover:bg-slate-700'}`}>
+                    <MaterialIcon name={g === 'other' ? 'person' : g} className="text-4xl"/>
+                    <span className="mt-2 font-medium capitalize">{g==='other'?'Other':g}</span>
+                  </div>
+                ))}
+              </div>
+              <button onClick={save} className="mt-6 w-full bg-emerald-600 text-white py-3 rounded-lg font-semibold">Save & Continue</button>
+            </div>)}
           </Box>
         </div>
       );
     };
 
-    /* ------------------ Utilities ------------------ */
-    const addMonths = (date, months)=> { const d = new Date(date); d.setMonth(d.getMonth()+months); return d; };
+    /* ------------------ Validity & Limits ------------------ */
+    const addMonths = (date, months)=> {
+      const d = new Date(date);
+      d.setMonth(d.getMonth()+months);
+      return d;
+    };
+
     const effectivePlanKey = (userData) => {
       const now = new Date();
       const key = userData?.plan || 'free';
@@ -375,6 +391,7 @@
       if (!exp || exp < now) return 'free';
       return key;
     };
+
     async function getThisMonthAlbumCount(uid){
       const now = new Date();
       const start = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -383,17 +400,19 @@
       return snap.size;
     }
 
+    /* ------------------ Paytm Helpers ------------------ */
     function loadPaytmScript(mid, env='PROD'){
       return new Promise((resolve, reject)=>{
         if (window.Paytm && window.Paytm.CheckoutJS) return resolve();
-        const script = document.createElement('script');
         const host = env==='PROD' ? 'https://securegw.paytm.in' : 'https://securegw-stage.paytm.in';
-        script.src = `${host}/merchantpgpui/checkoutjs/merchants/${mid}.js`;
-        script.onload = ()=> resolve();
-        script.onerror = ()=> reject(new Error('Failed to load Paytm CheckoutJS'));
-        document.body.appendChild(script);
+        const s = document.createElement('script');
+        s.src = `${host}/merchantpgpui/checkoutjs/merchants/${mid}.js`;
+        s.onload = ()=> resolve();
+        s.onerror = ()=> reject(new Error('Failed to load Paytm CheckoutJS'));
+        document.body.appendChild(s);
       });
     }
+
     async function startPaytmCheckout({ mid, env, orderId, amount, txnToken, onSuccess, onFailure }){
       await loadPaytmScript(mid, env);
       const config = {
@@ -402,16 +421,17 @@
         data: { orderId, token: txnToken, tokenType: "TXN_TOKEN", amount: String(amount) },
         merchant: { mid, redirect: false },
         handler: {
-          transactionStatus: function(data){
+          transactionStatus: function (data) {
             if (data && (data.STATUS === 'TXN_SUCCESS' || data.status === 'TXN_SUCCESS')) onSuccess?.(data);
             else onFailure?.(data);
           },
-          notifyMerchant: function(eventName, data){ console.log("notifyMerchant", eventName, data); }
+          notifyMerchant: function (eventName, data) { console.log("notifyMerchant", eventName, data); }
         }
       };
       await window.Paytm.CheckoutJS.init(config);
       window.Paytm.CheckoutJS.invoke();
     }
+
     async function grantPlanForUser(user, userData, planKey){
       const now = new Date();
       const currentExp = userData?.planExpiry?.toDate ? userData.planExpiry.toDate() : (userData?.planExpiry ? new Date(userData.planExpiry) : null);
@@ -421,11 +441,267 @@
       return newExpiry;
     }
 
-    /* ------------------ Uploader (minor mobile spacing tweaks) ------------------ */
-    // (unchanged logic; only classes adjusted for mobile spacing)
-    // ... ⬅️ keep your UploaderScreen here (unchanged from your last working version) ...
+    /* ------------------ Uploader ------------------ */
+    const UploaderScreen = ({ user, userData }) => {
+      const [frontCover, setFrontCover] = useState(null);
+      const [backCover, setBackCover]  = useState(null);
+      const [photos, setPhotos] = useState([]); // {file, preview}
+      const [title, setTitle] = useState('');
+      const [music, setMusic] = useState({ type:'preloaded', value:'' });
+      const [customMusic, setCustomMusic] = useState(null);
+      const [loading, setLoading] = useState(false);
+      const [progress, setProgress] = useState(0);
+      const [albumUrl, setAlbumUrl] = useState('');
+      const [copyText, setCopyText] = useState('Copy Link');
+      const [showLabName, setShowLabName] = useState(false);
+      const [social, setSocial] = useState({ instagram:'', whatsapp:'', facebook:'' });
+      const [passwordProtected, setPasswordProtected] = useState(false);
+      const [albumPassword, setAlbumPassword] = useState('');
 
-    /* ------------------ Album Viewer (mobile landscape + 2-page + password fix) ------------------ */
+      const dragItem = useRef(); const dragOverItem = useRef();
+
+      const activePlanKey = effectivePlanKey(userData);
+      const currentPlan = PLANS[activePlanKey];
+      const isBasicPlus = currentPlan.features.showLabName;
+      const isStandardPlus = currentPlan.features.editSheets;
+      const isPremium = currentPlan.features.passwordProtection;
+
+      const handleFileChange = (e, type) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        if (type==='front') setFrontCover(file);
+        else if (type==='back') setBackCover(file);
+        else if (type==='customMusic') setCustomMusic(file);
+        else if (type==='album') {
+          const files = Array.from(e.target.files).map(f => ({ file:f, preview: URL.createObjectURL(f) }));
+          setPhotos(prev => [...prev, ...files]);
+        }
+      };
+
+      const handleRemove = (i) => setPhotos(photos.filter((_,idx)=>idx!==i));
+      const onDragStart = (e, i) => { dragItem.current = i; e.currentTarget.classList.add('dragging');};
+      const onDragEnter = (e, i) => dragOverItem.current = i;
+      const onDragEnd = (e) => {
+        e.currentTarget.classList.remove('dragging');
+        const arr = [...photos];
+        const item = arr[dragItem.current];
+        arr.splice(dragItem.current,1);
+        arr.splice(dragOverItem.current,0,item);
+        dragItem.current = dragOverItem.current = null;
+        setPhotos(arr);
+      };
+
+      const uploadWithProgress = (file, onP, resourceType='image') => new Promise((resolve,reject)=>{
+        if (!file) return resolve(null);
+        const form = new FormData();
+        form.append('file', file);
+        form.append('upload_preset', UPLOAD_PRESET);
+        const xhr = new XMLHttpRequest();
+        xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/${resourceType}/upload`);
+        xhr.upload.onprogress = (ev)=>{ if (ev.lengthComputable) onP(Math.round(ev.loaded/ev.total*100)); };
+        xhr.onload = ()=> xhr.status>=200 && xhr.status<300 ? resolve(JSON.parse(xhr.responseText).secure_url) : reject(new Error('Upload failed'));
+        xhr.onerror = ()=> reject(new Error('Network error'));
+        xhr.send(form);
+      });
+
+      const handleCreate = async () => {
+        if (photos.length===0) return alert('Please add at least one photo.');
+        setLoading(true); setProgress(0);
+
+        try {
+          // Enforce monthly limit using active plan
+          const count = await getThisMonthAlbumCount(user.uid);
+          if (count >= currentPlan.limit) {
+            setLoading(false);
+            return alert(`You've reached your ${currentPlan.name} plan monthly limit of ${currentPlan.limit} album(s).`);
+          }
+
+          const all = [frontCover, backCover, ...photos.map(p=>p.file), customMusic].filter(Boolean);
+          const map = new Map(all.map(f=>[f.name,0]));
+          const updateOverall = ()=> {
+            const total = Array.from(map.values()).reduce((a,b)=>a+b,0);
+            setProgress(Math.round(total/all.length));
+          };
+
+          const promises = all.map(file=>{
+            const rt = file.type.startsWith('audio/') ? 'video' : 'image';
+            return uploadWithProgress(file, p=>{ map.set(file.name,p); updateOverall(); }, rt);
+          });
+
+          const urls = await Promise.all(promises);
+          const fc = frontCover ? urls.shift() : null;
+          const bc = backCover  ? urls.shift() : null;
+          let musicUrl = '';
+          if (customMusic) musicUrl = urls.pop();
+          else musicUrl = music.value;
+
+          const payload = {
+            uid: user.uid,
+            title: title || 'Untitled Album',
+            createdAt: Timestamp.fromDate(new Date()),
+            frontCoverUrl: fc,
+            backCoverUrl: bc,
+            imageUrls: urls,
+            musicUrl,
+            views: 0,
+            showLabName: isBasicPlus ? showLabName : false,
+            labName: userData.labName || '',
+            social: isPremium ? social : { instagram:'', whatsapp:'', facebook:'' },
+            passwordProtected: isPremium ? passwordProtected : false,
+            albumPassword: isPremium && passwordProtected ? (albumPassword || '') : ''
+          };
+
+          const ref = await addDoc(collection(db,'albums'), payload);
+          const link = `${window.location.origin}${window.location.pathname}?album=${ref.id}`;
+          setAlbumUrl(link);
+        } catch (e) {
+          console.error(e);
+          alert('Failed to create album.');
+        } finally {
+          setLoading(false);
+        }
+      };
+
+      return (
+        <div className="max-w-5xl mx-auto p-4 fade-in">
+          {loading && <Loader text="Uploading…" progress={progress} />}
+
+          {albumUrl ? (
+            <div className="max-w-3xl mx-auto text-center bg-white dark:bg-slate-800 rounded-2xl p-8 shadow-xl border border-slate-200 dark:border-slate-700">
+              <MaterialIcon name="check_circle" className="text-6xl text-emerald-500"/>
+              <h1 className="text-3xl font-bold mt-3">Album Created!</h1>
+              <p className="mt-2">Share this link with anyone:</p>
+              <input readOnly value={albumUrl} className="w-full mt-3 p-3 border rounded-lg bg-slate-100 dark:bg-slate-700"/>
+              <div className="mt-4 flex items-center justify-center gap-3">
+                <button onClick={()=>{navigator.clipboard.writeText(albumUrl); setCopyText('Copied!'); setTimeout(()=>setCopyText('Copy Link'),1500);}}
+                        className="bg-indigo-600 text-white py-2 px-4 rounded-lg">{copyText}</button>
+                <a className="py-2 px-4 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700" href={albumUrl} target="_blank" rel="noopener">Open</a>
+              </div>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-slate-800 p-6 md:p-8 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 space-y-8">
+              <div>
+                <h3 className="font-semibold mb-2 text-lg">1. Album Title</h3>
+                <input value={title} onChange={e=>setTitle(e.target.value)} placeholder="e.g., Summer Vacation"
+                       className="w-full p-3 border rounded-lg bg-transparent border-slate-300 dark:border-slate-600"/>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h3 className="font-semibold mb-2 text-lg">2. Front Cover (Optional)</h3>
+                  <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                    {frontCover ? <img src={URL.createObjectURL(frontCover)} className="h-full w-full object-cover rounded-lg"/> : <MaterialIcon name="book" className="text-5xl text-slate-400"/>}
+                    <input type="file" onChange={e=>handleFileChange(e,'front')} className="hidden"/>
+                  </label>
+                </div>
+                <div>
+                  <h3 className="font-semibold mb-2 text-lg">3. Back Cover (Optional)</h3>
+                  <label className="flex flex-col items-center justify-center w-full h-48 border-2 border-dashed rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                    {backCover ? <img src={URL.createObjectURL(backCover)} className="h-full w-full object-cover rounded-lg"/> : <MaterialIcon name="book" className="text-5xl text-slate-400"/>}
+                    <input type="file" onChange={e=>handleFileChange(e,'back')} className="hidden"/>
+                  </label>
+                </div>
+              </div>
+
+              <div>
+                <h3 className="font-semibold mb-2 text-lg">4. Album Photos (Drag to reorder)</h3>
+                <label className="flex flex-col items-center justify-center w-full py-10 border-2 border-dashed rounded-lg cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700 transition">
+                  <MaterialIcon name="add_photo_alternate" className="text-5xl text-slate-400"/>
+                  <span className="mt-2 text-indigo-600 dark:text-indigo-400 font-semibold">Click to upload photos</span>
+                  <input type="file" multiple onChange={e=>handleFileChange(e,'album')} className="hidden"/>
+                </label>
+                {photos.length>0 && (
+                  <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-4 mt-6">
+                    {photos.map((item,idx)=>(
+                      <div key={idx} draggable
+                           onDragStart={e=>onDragStart(e,idx)}
+                           onDragEnter={e=>onDragEnter(e,idx)}
+                           onDragEnd={onDragEnd}
+                           className="h-24 cursor-grab relative group transition">
+                        <img src={item.preview} className="w-full h-full object-cover rounded-md pointer-events-none"/>
+                        <div className="absolute inset-0 bg-black/0 group-hover:bg-black/30 grid place-items-center rounded-md transition">
+                          <MaterialIcon name="drag_indicator" className="text-white opacity-0 group-hover:opacity-100 transition"/>
+                        </div>
+                        <div className="absolute top-0 left-0 bg-black/70 text-white text-xs font-bold rounded-br-md px-1.5 py-0.5">{idx+1}</div>
+                        <button onClick={()=>handleRemove(idx)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 grid place-items-center opacity-0 group-hover:opacity-100 transition">
+                          <MaterialIcon name="close" style={{fontSize:'1rem'}}/>
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              <div className="grid gap-6 md:grid-cols-2">
+                <div>
+                  <h3 className="font-semibold mb-2 text-lg">5. Add Music (Optional)</h3>
+                  {!currentPlan.features.customMusic && currentPlan.name==='Free' ? (
+                    <p className="text-slate-500">Upgrade to Basic or higher to add music.</p>
+                  ) : (
+                    <div className="space-y-3">
+                      <select value={music.value} onChange={e=>setMusic({type:'preloaded', value:e.target.value})}
+                              className="w-full p-3 border rounded-lg bg-transparent border-slate-300 dark:border-slate-600">
+                        <option value="">No Music</option>
+                        {PRELOADED_MUSIC.map(t=><option key={t.url} value={t.url}>{t.name}</option>)}
+                      </select>
+                      {currentPlan.features.customMusic && (
+                        <div>
+                          <label className="block text-sm font-medium text-slate-600 dark:text-slate-400">Or upload custom music (MP3)</label>
+                          <input type="file" accept="audio/*" onChange={e=>{handleFileChange(e,'customMusic'); setMusic({type:'custom', value:''});}} className="w-full mt-1 text-sm"/>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {currentPlan.features.showLabName && (
+                  <div className="space-y-3">
+                    <h3 className="font-semibold mb-2 text-lg">6. Lab Name & Branding</h3>
+                    <label className="flex items-center gap-3">
+                      <input type="checkbox" className="w-4 h-4" checked={showLabName} onChange={e=>setShowLabName(e.target.checked)}/>
+                      <span>Show my lab/studio name on album page</span>
+                    </label>
+                    <p className="text-xs text-slate-500">Lab name from your profile: <strong>{userData.labName || '—'}</strong></p>
+                  </div>
+                )}
+              </div>
+
+              {currentPlan.features.passwordProtection && (
+                <div className="grid gap-6 md:grid-cols-2">
+                  <div>
+                    <h3 className="font-semibold mb-2 text-lg">7. Password Protection (Premium)</h3>
+                    <label className="flex items-center gap-3 mb-2">
+                      <input type="checkbox" className="w-4 h-4" checked={passwordProtected} onChange={e=>setPasswordProtected(e.target.checked)}/>
+                      <span>Require password to view album</span>
+                    </label>
+                    {passwordProtected && (
+                      <input type="password" value={albumPassword} onChange={e=>setAlbumPassword(e.target.value)} placeholder="Set album password"
+                             className="w-full p-3 border rounded-lg bg-transparent border-slate-300 dark:border-slate-600"/>
+                    )}
+                  </div>
+
+                  <div>
+                    <h3 className="font-semibold mb-2 text-lg">8. Social Links (Premium)</h3>
+                    <div className="grid grid-cols-1 gap-2">
+                      <input value={social.instagram} onChange={e=>setSocial({...social, instagram:e.target.value})} placeholder="Instagram profile URL" className="p-3 border rounded-lg bg-transparent"/>
+                      <input value={social.whatsapp} onChange={e=>setSocial({...social, whatsapp:e.target.value})} placeholder="WhatsApp link (https://wa.me/…)" className="p-3 border rounded-lg bg-transparent"/>
+                      <input value={social.facebook} onChange={e=>setSocial({...social, facebook:e.target.value})} placeholder="Facebook page URL" className="p-3 border rounded-lg bg-transparent"/>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              <button onClick={handleCreate} disabled={photos.length===0}
+                      className="w-full mt-2 bg-indigo-600 hover:bg-indigo-700 text-white py-3 rounded-xl font-semibold disabled:bg-slate-400 transition">
+                Create E-Album
+              </button>
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    /* ------------------ Album Viewer (unchanged behavior) ------------------ */
     const AlbumViewer = ({ albumId }) => {
       const [album, setAlbum] = useState(null);
       const [loading, setLoading] = useState(true);
@@ -433,91 +709,40 @@
       const [isPlaying, setIsPlaying] = useState(true);
       const [unlocked, setUnlocked] = useState(false);
       const [passInput, setPassInput] = useState('');
-
-      const [needsLandscape, setNeedsLandscape] = useState(false); // ⬅️ NEW
-      const containerRef = useRef(null);   // ⬅️ NEW: size-aware
       const flipRef = useRef(null);
       const flip = useRef(null);
       const audioRef = useRef(null);
 
-      // Detect mobile + portrait => request rotate
       useEffect(() => {
-        const check = () => {
-          const isMobile = window.innerWidth < 768;
-          const isPortrait = window.matchMedia('(orientation: portrait)').matches;
-          setNeedsLandscape(isMobile && isPortrait);
-        };
-        check();
-        window.addEventListener('resize', check);
-        window.addEventListener('orientationchange', check);
-        return () => {
-          window.removeEventListener('resize', check);
-          window.removeEventListener('orientationchange', check);
-        };
-      }, []);
-
-      useEffect(() => {
-        (async () => {
+        const run = async () => {
           try {
             const ref = doc(db,'albums', albumId);
             const snap = await getDoc(ref);
             if (!snap.exists()) { setError('Album not found.'); return; }
             const data = snap.data();
-            setAlbum({ id: albumId, ...data });
+            setAlbum(data);
             updateDoc(ref, { views: increment(1) }).catch(()=>{});
             const key = `album-${albumId}-ok`;
             if (!data.passwordProtected || sessionStorage.getItem(key)==='1') setUnlocked(true);
           } catch (e) { console.error(e); setError('Failed to load album.'); }
           finally { setLoading(false); }
-        })();
+        };
+        run();
       }, [albumId]);
 
-      // ⬅️ UPDATED: init/re-init PageFlip when album is ready, unlocked, and landscape (or desktop)
-      const initFlip = () => {
-        if (!flipRef.current) return;
-        if (flip.current) { flip.current.destroy(); flip.current = null; }
-
-        // Compute responsive size
-        const vw = Math.min(window.innerWidth, document.documentElement.clientWidth || window.innerWidth);
-        const vh = Math.min(window.innerHeight, document.documentElement.clientHeight || window.innerHeight);
-        // aim for wide double spread; keep aspect
-        const width = Math.min(1200, Math.floor(vw * 0.95));
-        const height = Math.min(680, Math.floor(vh * 0.70));
-
-        const pageFlip = new St.PageFlip(flipRef.current, {
-          width: Math.max(500, width),      // base width
-          height: Math.max(360, height),    // base height
-          size: "stretch",                  // ⬅️ allow stretch
-          maxShadowOpacity: 0.3,
-          showCover: true,
-          usePortrait: false,               // ⬅️ FORCE double-page even on small screens in landscape
-          flippingMode: 'hard',
-          autoSize: true                    // ⬅️ keep responsive
-        });
-
-        pageFlip.loadFromHTML(flipRef.current.querySelectorAll('.flip-page'));
-        flip.current = pageFlip;
-      };
-
-      // Re-init when unlocking / rotating / resizing
       useEffect(() => {
-        if (!album || !unlocked || needsLandscape) return;
-        // Allow DOM to paint before init
-        const id = setTimeout(initFlip, 50);
-        return () => clearTimeout(id);
-      }, [album, unlocked, needsLandscape]);
-
-      useEffect(() => {
-        const onResize = () => { if (album && unlocked && !needsLandscape) initFlip(); };
-        window.addEventListener('resize', onResize);
-        return () => window.removeEventListener('resize', onResize);
-      }, [album, unlocked, needsLandscape]);
+        if (album && flipRef.current) {
+          const pageFlip = new St.PageFlip(flipRef.current, { width:550, height:400, showCover:true, flippingMode:'hard' });
+          pageFlip.loadFromHTML(flipRef.current.querySelectorAll('.flip-page'));
+          flip.current = pageFlip;
+        }
+        return () => { if (flip.current){ flip.current.destroy(); flip.current=null; } };
+      }, [album]);
 
       const unlock = () => {
         if (passInput === (album?.albumPassword || '')) {
           setUnlocked(true);
           sessionStorage.setItem(`album-${albumId}-ok`, '1');
-          // Flipbook will initialize via the effect
         } else { alert('Incorrect password.'); }
       };
 
@@ -526,62 +751,42 @@
       if (!album) return null;
 
       return (
-        <div className="min-h-screen flex flex-col items-center justify-start sm:justify-center p-3 sm:p-4 fade-in">
+        <div className="min-h-screen flex flex-col items-center justify-center p-4 fade-in">
           {album.musicUrl && (
             <>
               <audio ref={audioRef} src={album.musicUrl} autoPlay loop/>
-              <button
-                onClick={()=>{ if(isPlaying && audioRef.current) audioRef.current.pause(); else if(audioRef.current) audioRef.current.play(); setIsPlaying(p=>!p); }}
-                className="fixed bottom-6 right-6 bg-indigo-600 text-white p-3 rounded-full floating-btn"
-                aria-label="Toggle music"
-              >
+              <button onClick={()=>{ if(isPlaying) audioRef.current.pause(); else audioRef.current.play(); setIsPlaying(p=>!p); }}
+                      className="fixed bottom-6 right-6 bg-indigo-600 text-white p-3 rounded-full floating-btn">
                 <MaterialIcon name={isPlaying?'volume_up':'volume_off'}/>
               </button>
             </>
           )}
 
-          <header className="text-center mb-3 sm:mb-6">
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">{album.title}</h1>
+          <header className="text-center mb-6">
+            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{album.title}</h1>
             {album.showLabName && album.labName && (
-              <p className="text-slate-500 mt-1 text-sm sm:text-base">by <span className="font-semibold">{album.labName}</span></p>
+              <p className="text-slate-500 mt-1">by <span className="font-semibold">{album.labName}</span></p>
             )}
             <a href={window.location.origin + window.location.pathname}
-               className="mt-2 inline-block text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-800 transition-colors text-sm sm:text-base">
+               className="mt-2 inline-block text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-800 transition-colors">
               Create your own album →
             </a>
           </header>
 
-          {/* ⬅️ NEW: Landscape prompt on phones */}
-          {needsLandscape && (
-            <div className="rotate-overlay">
-              <div className="rotate-box">
-                <div className="mx-auto mb-3 w-16 h-16 rounded-2xl bg-indigo-600 text-white grid place-items-center">
-                  <MaterialIcon name="screen_rotation"/>
-                </div>
-                <h3 className="text-xl font-bold mb-1">Rotate your device</h3>
-                <p className="text-slate-500 mb-4">For the best experience, please view this e-album in <strong>landscape</strong> mode.</p>
-                <button
-                  onClick={()=>{ /* re-check immediately */ window.dispatchEvent(new Event('resize')); }}
-                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg"
-                >I’ve rotated</button>
-              </div>
-            </div>
-          )}
-
           {album.passwordProtected && !unlocked ? (
-            <div className="w-full max-w-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-xl mobile-card">
+            <div className="w-full max-w-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-xl">
               <h3 className="text-xl font-semibold mb-2">This album is protected</h3>
               <p className="text-sm text-slate-500 mb-4">Enter the password to view.</p>
               <input type="password" value={passInput} onChange={e=>setPassInput(e.target.value)} placeholder="Album password"
                      className="w-full p-3 border rounded-lg bg-transparent"/>
-              <button onClick={unlock} className="w-full mt-3 bg-indigo-600 text-white py-3 rounded-lg font-semibold mobile-btn">Unlock</button>
+              <button onClick={unlock} className="w-full mt-3 bg-indigo-600 text-white py-3 rounded-lg font-semibold">Unlock</button>
             </div>
           ) : (
             <>
-              <div ref={containerRef} className="flipbook-wrap w-full">
-                <div className="flipbook-container" ref={flipRef}>
+              <div className="flipbook-container">
+                <div ref={flipRef}>
                   <div className="flip-page cover-page" data-density="hard">
-                    {album.frontCoverUrl ? <img src={album.frontCoverUrl} alt="Front cover"/> : <h2 className="text-2xl font-bold">{album.title}</h2>}
+                    {album.frontCoverUrl ? <img src={album.frontCoverUrl}/> : <h2 className="text-2xl font-bold">{album.title}</h2>}
                   </div>
                   {album.imageUrls.map((url,i)=>(
                     <div key={i} className="flip-page">
@@ -589,24 +794,21 @@
                     </div>
                   ))}
                   <div className="flip-page cover-page" data-density="hard">
-                    {album.backCoverUrl ? <img src={album.backCoverUrl} alt="Back cover"/> : <h2 className="text-xl">The End</h2>}
+                    {album.backCoverUrl ? <img src={album.backCoverUrl}/> : <h2 className="text-xl">The End</h2>}
                   </div>
                 </div>
               </div>
-
-              {!needsLandscape && (
-                <div className="flex items-center gap-3 sm:gap-4 mt-3 sm:mt-4">
-                  <button onClick={()=>flip.current && flip.current.flipPrev()} className="bg-white dark:bg-slate-700 p-3 rounded-full shadow-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition" aria-label="Previous page"><MaterialIcon name="arrow_back"/></button>
-                  <span className="text-slate-600 dark:text-slate-300 font-medium text-sm sm:text-base">Turn Page</span>
-                  <button onClick={()=>flip.current && flip.current.flipNext()} className="bg-white dark:bg-slate-700 p-3 rounded-full shadow-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition" aria-label="Next page"><MaterialIcon name="arrow_forward"/></button>
-                </div>
-              )}
+              <div className="flex items-center gap-4 mt-4">
+                <button onClick={()=>flip.current && flip.current.flipPrev()} className="bg-white dark:bg-slate-700 p-3 rounded-full shadow-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition"><MaterialIcon name="arrow_back"/></button>
+                <span className="text-slate-600 dark:text-slate-300 font-medium">Turn Page</span>
+                <button onClick={()=>flip.current && flip.current.flipNext()} className="bg-white dark:bg-slate-700 p-3 rounded-full shadow-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition"><MaterialIcon name="arrow_forward"/></button>
+              </div>
 
               {album.social && (album.social.instagram || album.social.whatsapp || album.social.facebook) && (
-                <div className="mt-5 sm:mt-6 flex items-center gap-2 sm:gap-3">
-                  {album.social.instagram && <a href={album.social.instagram} target="_blank" rel="noopener" className="px-3 py-2 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-sm sm:text-base"><MaterialIcon name="photo_camera"/> Instagram</a>}
-                  {album.social.whatsapp && <a href={album.social.whatsapp} target="_blank" rel="noopener" className="px-3 py-2 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-sm sm:text-base"><MaterialIcon name="whatsapp"/> WhatsApp</a>}
-                  {album.social.facebook && <a href={album.social.facebook} target="_blank" rel="noopener" className="px-3 py-2 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-sm sm:text-base"><MaterialIcon name="facebook"/> Facebook</a>}
+                <div className="mt-6 flex items-center gap-3">
+                  {album.social.instagram && <a href={album.social.instagram} target="_blank" rel="noopener" className="px-3 py-2 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"><MaterialIcon name="photo_camera"/> Instagram</a>}
+                  {album.social.whatsapp && <a href={album.social.whatsapp} target="_blank" rel="noopener" className="px-3 py-2 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"><MaterialIcon name="whatsapp"/> WhatsApp</a>}
+                  {album.social.facebook && <a href={album.social.facebook} target="_blank" rel="noopener" className="px-3 py-2 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"><MaterialIcon name="facebook"/> Facebook</a>}
                 </div>
               )}
             </>
@@ -615,9 +817,540 @@
       );
     };
 
-    /* ------------------ Dashboard, Edit, Pricing, FAQ, Contact ------------------ */
-    // (Use your previously-working versions; no logic changes needed for this task)
-    // ... Keep your DashboardScreen, EditAlbumModal, PricingScreen, FaqScreen, ContactScreen and UploaderScreen here ...
+    /* ------------------ Dashboard + Edit Modal ------------------ */
+    const QrCodeDisplay = ({ album }) => {
+      const qrRef = useRef(null);
+      const [dataUrl, setDataUrl] = useState('');
+      useEffect(() => {
+        if (!qrRef.current) return;
+        qrRef.current.innerHTML = '';
+        new QRCode(qrRef.current, { text: album.url, width: 256, height: 256 });
+        setTimeout(() => {
+          const canvas = qrRef.current.querySelector('canvas');
+          if (canvas) setDataUrl(canvas.toDataURL('image/png'));
+        }, 80);
+      }, [album.url]);
+      const download = () => { const a = document.createElement('a'); a.download = `${album.title}-qrcode.png`; a.href = dataUrl; a.click(); };
+      return (<div className="flex flex-col items-center"><div ref={qrRef}></div><button onClick={download} className="mt-4 bg-emerald-600 text-white py-2 px-4 rounded-lg">Download QR</button></div>);
+    };
+
+    const EditAlbumModal = ({ planKey, album, onClose, onUpdated }) => {
+      const plan = PLANS[planKey];
+      const canEditSheets = plan.features.editSheets;
+      const isPremium = plan.features.passwordProtection;
+
+      const [title, setTitle] = useState(album.title);
+      const [images, setImages] = useState(album.imageUrls || []);
+      const [adding, setAdding] = useState(false);
+      const [passwordProtected, setPasswordProtected] = useState(!!album.passwordProtected);
+      const [albumPassword, setAlbumPassword] = useState(album.albumPassword || '');
+      const [social, setSocial] = useState(album.social || { instagram:'', whatsapp:'', facebook:'' });
+
+      const dragItem = useRef(); const dragOver = useRef();
+
+      const removeAt = (i) => setImages(images.filter((_,idx)=>idx!==i));
+      const onDragStart = (e,i)=>{ dragItem.current=i; e.currentTarget.classList.add('dragging'); };
+      const onDragEnter = (e,i)=> dragOver.current=i;
+      const onDragEnd = (e)=>{
+        e.currentTarget.classList.remove('dragging');
+        const arr=[...images]; const it=arr[dragItem.current];
+        arr.splice(arr.indexOf(it),1); arr.splice(dragOver.current,0,it);
+        dragItem.current=dragOver.current=null; setImages(arr);
+      };
+
+      const addImages = async (files) => {
+        setAdding(true);
+        try {
+          const list = Array.from(files);
+          const uploaded = [];
+          for (const file of list) {
+            const url = await new Promise((resolve,reject)=>{
+              const form=new FormData();
+              form.append('file', file);
+              form.append('upload_preset', UPLOAD_PRESET);
+              const xhr = new XMLHttpRequest();
+              xhr.open('POST', `https://api.cloudinary.com/v1_1/${CLOUD_NAME}/image/upload`);
+              xhr.onload = ()=> xhr.status>=200 && xhr.status<300 ? resolve(JSON.parse(xhr.responseText).secure_url) : reject(new Error('Upload failed'));
+              xhr.onerror = ()=> reject(new Error('Network error'));
+              xhr.send(form);
+            });
+            uploaded.push(url);
+          }
+          setImages(prev => [...prev, ...uploaded]);
+        } catch (e) { alert('Failed to upload some images.'); }
+        finally { setAdding(false); }
+      };
+
+      const save = async () => {
+        try {
+          await updateDoc(doc(db, 'albums', album.id), {
+            title,
+            imageUrls: images,
+            passwordProtected: isPremium ? passwordProtected : false,
+            albumPassword: isPremium && passwordProtected ? (albumPassword || '') : '',
+            social: isPremium ? social : { instagram:'', whatsapp:'', facebook:'' }
+          });
+          onUpdated(); onClose();
+        } catch (e) { console.error(e); alert('Failed to save changes.'); }
+      };
+
+      return (
+        <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4" onClick={onClose}>
+          <div onClick={e=>e.stopPropagation()} className="w-full max-w-3xl bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 p-6 space-y-6 fade-in">
+            <div className="flex items-center justify-between">
+              <h3 className="text-xl font-bold">Edit Album</h3>
+              <button onClick={onClose} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"><MaterialIcon name="close"/></button>
+            </div>
+
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium mb-1">Title</label>
+                <input value={title} onChange={e=>setTitle(e.target.value)} className="w-full p-3 border rounded-lg bg-transparent"/>
+              </div>
+
+              {isPremium && (
+                <div>
+                  <label className="block text-sm font-medium mb-1">Password Protection</label>
+                  <label className="flex items-center gap-2 mb-2">
+                    <input type="checkbox" checked={passwordProtected} onChange={e=>setPasswordProtected(e.target.checked)}/>
+                    <span>Require password to view</span>
+                  </label>
+                  {passwordProtected && (
+                    <input type="text" value={albumPassword} onChange={e=>setAlbumPassword(e.target.value)} placeholder="Set / change album password"
+                           className="w-full p-3 border rounded-lg bg-transparent"/>
+                  )}
+                </div>
+              )}
+            </div>
+
+            {plan.features.socialLinks && (
+              <div className="grid md:grid-cols-3 gap-3">
+                <div><input value={social.instagram||''} onChange={e=>setSocial({...social, instagram:e.target.value})} placeholder="Instagram URL" className="w-full p-3 border rounded-lg bg-transparent"/></div>
+                <div><input value={social.whatsapp||''} onChange={e=>setSocial({...social, whatsapp:e.target.value})} placeholder="WhatsApp link" className="w-full p-3 border rounded-lg bg-transparent"/></div>
+                <div><input value={social.facebook||''} onChange={e=>setSocial({...social, facebook:e.target.value})} placeholder="Facebook URL" className="w-full p-3 border rounded-lg bg-transparent"/></div>
+              </div>
+            )}
+
+            {canEditSheets ? (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="font-semibold">Manage Sheets</h4>
+                  <label className="px-3 py-2 rounded-lg border cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700">
+                    <input type="file" multiple className="hidden" onChange={e=>addImages(e.target.files)}/>
+                    <span className="flex items-center gap-2"><MaterialIcon name="add"/> Add Photos</span>
+                  </label>
+                </div>
+                {adding && <p className="text-sm text-slate-500">Uploading…</p>}
+                <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                  {images.map((url,idx)=>(
+                    <div key={idx} draggable
+                         onDragStart={e=>onDragStart(e,idx)}
+                         onDragEnter={e=>onDragEnter(e,idx)}
+                         onDragEnd={onDragEnd}
+                         className="relative h-24 rounded-md overflow-hidden border border-slate-200 dark:border-slate-700 cursor-grab">
+                      <img src={url} className="w-full h-full object-cover"/>
+                      <div className="absolute inset-0 bg-black/0 hover:bg-black/30 transition grid place-items-center">
+                        <MaterialIcon name="drag_indicator" className="text-white opacity-0 hover:opacity-100 transition"/>
+                      </div>
+                      <button onClick={()=>removeAt(idx)} className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-6 h-6 grid place-items-center">
+                        <MaterialIcon name="close" style={{fontSize:'16px'}}/>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <p className="text-sm text-slate-500">Upgrade to Standard or Premium to manage sheets (reorder / add / remove).</p>
+            )}
+
+            <div className="flex justify-end gap-3">
+              <button onClick={onClose} className="px-4 py-2 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700">Cancel</button>
+              <button onClick={save} className="px-4 py-2 rounded-lg bg-indigo-600 text-white">Save Changes</button>
+            </div>
+          </div>
+        </div>
+      );
+    };
+
+    const DashboardScreen = ({ user, userData }) => {
+      const activeKey = effectivePlanKey(userData);
+      const plan = PLANS[activeKey];
+
+      const [albums, setAlbums] = useState([]);
+      const [loading, setLoading] = useState(true);
+      const [modal, setModal] = useState(null);
+      const [copy, setCopy] = useState({});
+
+      useEffect(()=>{ (async()=>{
+        setLoading(true);
+        try {
+          const qy = query(collection(db,'albums'), where('uid','==', user.uid));
+          const snap = await getDocs(qy);
+          setAlbums(snap.docs.map(d => ({ id:d.id, ...d.data() })));
+        } catch (e) { console.error(e); }
+        setLoading(false);
+      })(); }, [user.uid]);
+
+      const totalViews = albums.reduce((a,b)=>a+(b.views||0),0);
+
+      const copyLink = (id) => {
+        const url = `${window.location.origin}${window.location.pathname}?album=${id}`;
+        navigator.clipboard.writeText(url);
+        setCopy(s=>({...s,[id]:'Copied!'}));
+        setTimeout(()=>setCopy(s=>({...s,[id]:null})), 1500);
+      };
+
+      const genQR = (al) => {
+        const url = `${window.location.origin}${window.location.pathname}?album=${al.id}`;
+        setModal({ type:'qr', data:{ ...al, url } });
+      };
+
+      const del = async (id) => {
+        await deleteDoc(doc(db,'albums', id));
+        setModal(null);
+        const qy = query(collection(db,'albums'), where('uid','==', user.uid));
+        const snap = await getDocs(qy);
+        setAlbums(snap.docs.map(d=>({ id:d.id, ...d.data() })));
+      };
+
+      const refreshAlbums = async () => {
+        const qy = query(collection(db,'albums'), where('uid','==', user.uid));
+        const snap = await getDocs(qy);
+        setAlbums(snap.docs.map(d=>({ id:d.id, ...d.data() })));
+      };
+
+      return (
+        <div className="max-w-7xl mx-auto p-4 fade-in">
+          {loading && <Loader text="Loading your albums…"/>}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700">
+              <h3 className="text-slate-500">Total Albums</h3>
+              <p className="text-3xl font-bold">{albums.length}</p>
+            </div>
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700">
+              <h3 className="text-slate-500">Total Views</h3>
+              <p className="text-3xl font-bold">{totalViews}</p>
+            </div>
+            <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700">
+              <h3 className="text-slate-500">Current Plan</h3>
+              <p className="text-3xl font-bold">{plan.name}</p>
+              {userData?.planExpiry && effectivePlanKey(userData) !== 'free' && (
+                <p className="text-sm text-slate-500 mt-1">Valid till { (userData.planExpiry.toDate ? userData.planExpiry.toDate() : new Date(userData.planExpiry)).toLocaleDateString() }</p>
+              )}
+            </div>
+          </div>
+
+          <h2 className="text-2xl font-bold mb-3">Your Albums</h2>
+
+          {albums.length===0 ? (
+            <p className="text-center text-slate-500">You haven’t created any albums yet.</p>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {albums.map(al=>(
+                <div key={al.id} className="bg-white dark:bg-slate-800 rounded-xl shadow-xl overflow-hidden border border-slate-200 dark:border-slate-700 group">
+                  <a href={`${window.location.origin}${window.location.pathname}?album=${al.id}`} target="_blank" rel="noopener">
+                    <img src={al.frontCoverUrl || (al.imageUrls && al.imageUrls[0])} className="w-full h-48 object-cover group-hover:scale-[1.02] transition"/>
+                  </a>
+                  <div className="p-4">
+                    <div className="flex items-start justify-between">
+                      <h3 className="font-bold text-lg">{al.title}</h3>
+                      <div className="text-right">
+                        <p className="font-bold text-lg">{al.views || 0}</p>
+                        <p className="text-xs text-slate-500">views</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 mt-4">
+                      <button onClick={()=>copyLink(al.id)} className="flex-1 bg-blue-600 text-white py-2 px-3 text-sm rounded-lg">{copy[al.id] || 'Copy Link'}</button>
+                      <button onClick={()=>genQR(al)} disabled={!plan.features.qrDownload}
+                              className="flex-1 bg-gray-600 text-white py-2 px-3 text-sm rounded-lg disabled:opacity-50 disabled:cursor-not-allowed">
+                        Show QR
+                      </button>
+                    </div>
+                    <div className="flex gap-2 mt-2">
+                      <button onClick={()=>setModal({ type:'edit', data:al })} className="flex-1 bg-yellow-500 text-white py-2 px-3 text-sm rounded-lg">Edit</button>
+                      <button onClick={()=>setModal({ type:'delete', data:al })} className="flex-1 bg-red-600 text-white py-2 px-3 text-sm rounded-lg">Delete</button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {modal && (
+            <div className="fixed inset-0 z-50">
+              {modal.type==='qr' && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" onClick={()=>setModal(null)}>
+                  <div onClick={e=>e.stopPropagation()} className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 relative">
+                    <button onClick={()=>setModal(null)} className="absolute top-2 right-2 p-1 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"><MaterialIcon name="close"/></button>
+                    <QrCodeDisplay album={modal.data}/>
+                  </div>
+                </div>
+              )}
+              {modal.type==='delete' && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4" onClick={()=>setModal(null)}>
+                  <div onClick={e=>e.stopPropagation()} className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 max-w-md w-full">
+                    <h3 className="text-lg font-bold">Delete album?</h3>
+                    <p className="mt-2">Delete “{modal.data.title}” permanently?</p>
+                    <div className="flex justify-end gap-3 mt-6">
+                      <button onClick={()=>setModal(null)} className="px-4 py-2 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700">Cancel</button>
+                      <button onClick={async()=>{ await deleteDoc(doc(db,'albums', modal.data.id)); setModal(null); const qy=query(collection(db,'albums'), where('uid','==', user.uid)); const snap=await getDocs(qy); setAlbums(snap.docs.map(d=>({id:d.id,...d.data()}))); }} className="px-4 py-2 rounded-lg bg-red-600 text-white">Delete</button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {modal.type==='edit' && (
+                <EditAlbumModal
+                  planKey={effectivePlanKey(userData)}
+                  album={modal.data}
+                  onClose={()=>setModal(null)}
+                  onUpdated={refreshAlbums}
+                />
+              )}
+            </div>
+          )}
+        </div>
+      );
+    };
+
+    /* ------------------ Profile ------------------ */
+    const ProfileScreen = ({ user, userData, onUpdate }) => {
+      const [details, setDetails] = useState(userData);
+      const [loading, setLoading] = useState(false);
+      const [pwd, setPwd] = useState({ current:'', next:'', confirm:'' });
+      const [msg, setMsg] = useState({ type:'', text:'' });
+
+      const saveDetails = async () => {
+        setLoading(true);
+        try { await updateDoc(doc(db,'users', user.uid), details); onUpdate(details); alert('Profile updated successfully!'); }
+        finally { setLoading(false); }
+      };
+
+      const changePwd = async () => {
+        if (pwd.next !== pwd.confirm) return setMsg({type:'err', text:'New passwords do not match.'});
+        if (pwd.next.length<6) return setMsg({type:'err', text:'New password must be at least 6 characters long.'});
+        setLoading(true); setMsg({type:'', text:''});
+        try {
+          const cred = EmailAuthProvider.credential(user.email, pwd.current);
+          await reauthenticateWithCredential(user, cred);
+          await updatePassword(user, pwd.next);
+          setMsg({type:'ok', text:'Password updated successfully!'});
+          setPwd({current:'', next:'', confirm:''});
+        } catch (e) {
+          setMsg({type:'err', text:'Incorrect current password.'});
+        } finally { setLoading(false); }
+      };
+
+      return (
+        <div className="max-w-5xl mx-auto p-4 fade-in">
+          {loading && <Loader text="Saving…"/>}
+          <h1 className="text-3xl font-bold mb-6">My Profile</h1>
+
+          <div className="bg-white dark:bg-slate-800 p-6 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div><label className="block text-sm font-medium">Name</label><input value={details.name||''} onChange={e=>setDetails({...details, name:e.target.value})} className="w-full mt-1 p-3 border rounded-lg bg-transparent"/></div>
+              <div><label className="block text-sm font-medium">Lab/Studio Name</label><input value={details.labName||''} onChange={e=>setDetails({...details, labName:e.target.value})} className="w-full mt-1 p-3 border rounded-lg bg-transparent"/></div>
+              <div><label className="block text-sm font-medium">City</label><input value={details.city||''} onChange={e=>setDetails({...details, city:e.target.value})} className="w-full mt-1 p-3 border rounded-lg bg-transparent"/></div>
+              <div><label className="block text-sm font-medium">Age</label><input type="number" value={details.age||''} onChange={e=>setDetails({...details, age:e.target.value})} className="w-full mt-1 p-3 border rounded-lg bg-transparent"/></div>
+            </div>
+            <div><label className="block text-sm font-medium">Email</label><input value={user.email} disabled className="w-full mt-1 p-3 border rounded-lg bg-slate-100 dark:bg-slate-700"/></div>
+            <div className="flex justify-end"><button onClick={saveDetails} className="bg-emerald-600 text-white py-2 px-6 rounded-lg font-semibold">Save Changes</button></div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-800 p-6 mt-8 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 space-y-4">
+            <h2 className="text-2xl font-bold">Change Password</h2>
+            <p className="text-sm text-slate-500">Available if you signed up with email + password.</p>
+            <div className="grid md:grid-cols-3 gap-4">
+              <div><label className="block text-sm">Current</label><input type="password" value={pwd.current} onChange={e=>setPwd({...pwd, current:e.target.value})} className="w-full p-3 border rounded-lg bg-transparent"/></div>
+              <div><label className="block text-sm">New</label><input type="password" value={pwd.next} onChange={e=>setPwd({...pwd, next:e.target.value})} className="w-full p-3 border rounded-lg bg-transparent"/></div>
+              <div><label className="block text-sm">Confirm</label><input type="password" value={pwd.confirm} onChange={e=>setPwd({...pwd, confirm:e.target.value})} className="w-full p-3 border rounded-lg bg-transparent"/></div>
+            </div>
+            {msg.text && <p className={msg.type==='err'?'text-red-500':'text-emerald-500'}>{msg.text}</p>}
+            <div className="flex justify-end"><button onClick={changePwd} className="bg-indigo-600 text-white py-2 px-6 rounded-lg font-semibold">Update Password</button></div>
+          </div>
+        </div>
+      );
+    };
+
+    /* ------------------ Pricing (Paytm integrated with backend) ------------------ */
+    const PricingScreen = ({ user, userData, onPlanChange }) => {
+      const [loading, setLoading] = useState(false);
+      const activeKey = effectivePlanKey(userData);
+      const activePlan = PLANS[activeKey];
+      const activeExpiry = userData?.planExpiry ? (userData.planExpiry.toDate ? userData.planExpiry.toDate() : new Date(userData.planExpiry)) : null;
+
+      const purchasePlan = async (planKey) => {
+        if (planKey === 'free') {
+          setLoading(true);
+          await updateDoc(doc(db,'users', user.uid), { plan:'free', planExpiry: null });
+          onPlanChange('free');
+          setLoading(false);
+          alert('Switched to Free plan.');
+          return;
+        }
+
+        const amount = PLANS[planKey].priceRs;
+
+        // Dev mode simulation (optional)
+        if (PAYTM.USE_DEV_FAKE_PAYMENTS) {
+          if (confirm(`(DEV MODE) Simulate successful payment of ${rupee(amount)} for ${PLANS[planKey].name}?`)) {
+            setLoading(true);
+            const newExp = await grantPlanForUser(user, userData, planKey);
+            onPlanChange(planKey);
+            setLoading(false);
+            alert(`Payment simulated.\nPlan activated: ${PLANS[planKey].name}\nValid till: ${newExp.toLocaleDateString()}`);
+          }
+          return;
+        }
+
+        // LIVE: call backend to create order, then open Paytm CheckoutJS
+        try {
+          setLoading(true);
+
+          // 1) Create order on your Vercel serverless function
+          const res = await fetch(PAYTM.CREATE_ORDER_API, {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json' },
+            body: JSON.stringify({
+              amount,
+              planKey,
+              customerId: user.uid,
+              customerEmail: user.email
+            })
+          });
+          if (!res.ok) throw new Error('Failed to create Paytm order');
+          const { orderId, txnToken, mid, env } = await res.json();
+          if (!orderId || !txnToken || !mid) throw new Error('Invalid Paytm order response');
+
+          // 2) Start Paytm Checkout
+          await startPaytmCheckout({
+            mid,
+            env,
+            orderId,
+            amount,
+            txnToken,
+            onSuccess: async () => {
+              const newExp = await grantPlanForUser(user, userData, planKey);
+              onPlanChange(planKey);
+              alert(`Payment successful!\nPlan: ${PLANS[planKey].name}\nValid till: ${newExp.toLocaleDateString()}`);
+              setLoading(false);
+            },
+            onFailure: () => {
+              alert('Payment failed or was cancelled.');
+              setLoading(false);
+            }
+          });
+
+        } catch (e) {
+          console.error(e);
+          alert('Payment setup failed. Please try again.');
+          setLoading(false);
+        }
+      };
+
+      return (
+        <div className="max-w-7xl mx-auto p-4 fade-in">
+          {loading && <Loader text="Processing…"/>}
+          <h1 className="text-3xl font-bold text-center mb-2">Choose Your Plan</h1>
+          <p className="text-center text-slate-500 mb-8">Current: <strong>{activePlan.name}</strong>{activeExpiry && activeKey!=='free' ? ` (valid till ${activeExpiry.toLocaleDateString()})` : ''}</p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            {Object.entries(PLANS).map(([key,plan])=> {
+              const isActive = activeKey === key && activeKey !== 'free';
+              const price = key==='free' ? '₹0' : rupee(plan.priceRs);
+              const btnLabel =
+                key==='free' ? (activeKey==='free' ? 'Current Plan' : 'Switch to Free') :
+                isActive ? 'Extend 1 Month' : `Subscribe ${price}/month`;
+
+              return (
+                <div key={key} className={`bg-white dark:bg-slate-800 rounded-2xl shadow-xl p-6 border ${activeKey===key?'border-indigo-500':'border-slate-200 dark:border-slate-700'} flex flex-col`}>
+                  <h2 className="text-2xl font-bold text-center">{plan.name}</h2>
+                  <p className="text-4xl font-bold text-center mt-2">{price}<span className="text-lg font-normal">{key==='free' ? '' : '/mo'}</span></p>
+                  <ul className="mt-5 space-y-2 text-slate-600 dark:text-slate-400 flex-grow">
+                    <li className="flex items-center gap-2"><MaterialIcon name="check" className="text-emerald-500"/> {plan.limit} e-albums/month</li>
+                    {plan.features.qrDownload && <li className="flex items-center gap-2"><MaterialIcon name="check" className="text-emerald-500"/> QR Code Download</li>}
+                    {plan.features.customMusic && <li className="flex items-center gap-2"><MaterialIcon name="check" className="text-emerald-500"/> Add/Custom Music</li>}
+                    {plan.features.editSheets && <li className="flex items-center gap-2"><MaterialIcon name="check" className="text-emerald-500"/> Manage Sheets</li>}
+                    {plan.features.passwordProtection && <li className="flex items-center gap-2"><MaterialIcon name="check" className="text-emerald-500"/> Password Protection</li>}
+                    {plan.features.socialLinks && <li className="flex items-center gap-2"><MaterialIcon name="check" className="text-emerald-500"/> Social Links</li>}
+                    {plan.features.showLabName && <li className="flex items-center gap-2"><MaterialIcon name="check" className="text-emerald-500"/> Show Lab Name</li>}
+                  </ul>
+                  <button
+                    onClick={()=>purchasePlan(key)}
+                    disabled={key==='free' && activeKey==='free'}
+                    className="w-full mt-6 bg-indigo-600 text-white py-3 rounded-lg font-semibold disabled:bg-slate-400"
+                  >
+                    {btnLabel}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          {PAYTM.USE_DEV_FAKE_PAYMENTS && (
+            <p className="mt-6 text-sm text-amber-600 text-center">
+              Dev mode: payments are simulated. Set <code>PAYTM.USE_DEV_FAKE_PAYMENTS=false</code> and deploy your backend <code>/api/createPaytmOrder</code> with Paytm env vars to go live.
+            </p>
+          )}
+        </div>
+      );
+    };
+
+    /* ------------------ FAQ & Contact ------------------ */
+    const FaqScreen = () => {
+      const faqs = [
+        { q:'What is an E-Album?', a:'An interactive, flip-book style photo album you can share with a link or QR code.'},
+        { q:'How many albums can I create?', a:'It depends on your plan: Free (2/month), Basic (40/month), Standard (100/month), Premium (250/month).'},
+        { q:'Do plans expire?', a:'Yes. Purchased plans are valid for one month from activation. You can extend anytime; new validity starts from the later of current expiry or today.'},
+        { q:'Can I protect an album with a password?', a:'Yes, on Premium you can set and change an album password anytime.'},
+        { q:'Can I rearrange or remove sheets?', a:'Yes, on Standard and Premium you can reorder, add or remove sheets from the Edit menu.'},
+        { q:'Can I add music?', a:'Basic and above support adding music; Standard and Premium additionally support custom tracks.'},
+        { q:'How do I show my lab name?', a:'On Basic and above, you’ll see a toggle while creating an album to show your lab/studio name on the album page.'},
+      ];
+      return (
+        <div className="max-w-3xl mx-auto p-4 fade-in">
+          <h1 className="text-3xl font-bold mb-6">Frequently Asked Questions</h1>
+          <div className="space-y-3">
+            {faqs.map((f,i)=>(
+              <details key={i} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4">
+                <summary className="font-semibold cursor-pointer select-none">{f.q}</summary>
+                <p className="mt-2 text-slate-600 dark:text-slate-300">{f.a}</p>
+              </details>
+            ))}
+          </div>
+        </div>
+      );
+    };
+
+    const ContactScreen = () => {
+      const phone = '+911234567890';
+      const email = 'support@yourstudio.com';
+      const waText = encodeURIComponent('Hello! I need help with my e-album.');
+      return (
+        <div className="max-w-3xl mx-auto p-4 fade-in">
+          <h1 className="text-3xl font-bold mb-6">Contact Us</h1>
+          <div className="grid md:grid-cols-3 gap-4">
+            <a href={`https://wa.me/${phone.replace(/\D/g,'')}?text=${waText}`} target="_blank" rel="noopener"
+               className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow hover:shadow-lg transition flex flex-col items-center gap-2">
+              <MaterialIcon name="whatsapp" className="text-4xl text-emerald-500"/>
+              <div className="font-semibold">WhatsApp</div>
+              <div className="text-sm text-slate-500">{phone}</div>
+            </a>
+            <a href={`mailto:${email}?subject=${encodeURIComponent('Support Request')}`}
+               className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow hover:shadow-lg transition flex flex-col items-center gap-2">
+              <MaterialIcon name="mail" className="text-4xl text-indigo-600"/>
+              <div className="font-semibold">Email</div>
+              <div className="text-sm text-slate-500">{email}</div>
+            </a>
+            <a href={`tel:${phone}`} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow hover:shadow-lg transition flex flex-col items-center gap-2">
+              <MaterialIcon name="call" className="text-4xl text-fuchsia-500"/>
+              <div className="font-semibold">Phone</div>
+              <div className="text-sm text-slate-500">{phone}</div>
+            </a>
+          </div>
+        </div>
+      );
+    };
 
     /* ------------------ App & Router ------------------ */
     const App = () => {
@@ -640,7 +1373,7 @@
       const [authState, setAuthState] = useState({ isLoading:true, user:null, isNewUser:false, userData:null });
       const [loading, setLoading] = useState(false);
       const [view, setView] = useState('dashboard');
-      window.__setView = setView;
+      window.__setView = setView; // for nav buttons
 
       const urlParams = new URLSearchParams(window.location.search);
       const albumId = urlParams.get('album');
@@ -655,6 +1388,8 @@
               const ref = doc(db,'users', user.uid);
               const udoc = await getDoc(ref);
               let data = udoc.exists() ? udoc.data() : null;
+
+              // If plan expired, downgrade to free
               if (data && data.plan && data.plan !== 'free') {
                 const exp = data.planExpiry?.toDate ? data.planExpiry.toDate() : (data.planExpiry ? new Date(data.planExpiry) : null);
                 if (!exp || exp < new Date()) {
@@ -662,6 +1397,7 @@
                   data = { ...data, plan:'free', planExpiry: null };
                 }
               }
+
               setAuthState({ isLoading:false, user, isNewUser:!udoc.exists(), userData: data });
             } else {
               setAuthState({ isLoading:false, user, isNewUser:false, userData:null });
@@ -683,6 +1419,7 @@
         }
         setLoading(false);
       };
+
       const onProfileUpdate = (newData) => setAuthState(prev=>({ ...prev, userData:newData }));
 
       if (albumId) return <AlbumViewer albumId={albumId}/>;
@@ -692,8 +1429,6 @@
       if (!authState.user.emailVerified) return <VerifyEmailScreen user={authState.user}/>;
       if (authState.isNewUser) return <NewUserDetailsForm user={authState.user} onComplete={completeDetails}/>;
 
-      // ⬅️ Insert your working components (UploaderScreen, DashboardScreen, ProfileScreen, PricingScreen, FaqScreen, ContactScreen)
-      // For brevity, only route wiring is shown here:
       const renderView = () => {
         switch (view) {
           case 'dashboard': return <DashboardScreen user={authState.user} userData={authState.userData}/>;
@@ -709,14 +1444,10 @@
       return (
         <>
           <TopNav view={view} setView={setView} user={authState.user} theme={theme} toggleTheme={toggleTheme}/>
-          <main className="mobile-pad">{renderView()}</main>
+          <main>{renderView()}</main>
         </>
       );
     };
-
-    // ⬅️ NOTE: Keep your existing implementations of
-    // UploaderScreen, DashboardScreen, EditAlbumModal, PricingScreen, FaqScreen, ContactScreen, ProfileScreen
-    // from your last working code. This file focuses on AlbumViewer + mobile polish.
 
     ReactDOM.createRoot(document.getElementById('root')).render(<App/>);
   </script>
