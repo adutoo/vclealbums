@@ -751,7 +751,7 @@
       // ⬅️ UPDATED: init/re-init PageFlip when album is ready, unlocked, and landscape (or desktop)
       const initFlip = () => {
         if (!flipRef.current) return;
-        if (flip.current) { flip.current.destroy(); flip.current = null; }
+        if (flip.current) { flip.current.update(); flip.current = null; }
 
         // Compute responsive size
         const vw = Math.min(window.innerWidth, document.documentElement.clientWidth || window.innerWidth);
