@@ -731,13 +731,13 @@
       }, [albumId]);
 
       useEffect(() => {
-        if (album && flipRef.current) {
+        if (album && flipRef.current && unlocked) {
           const pageFlip = new St.PageFlip(flipRef.current, { width:550, height:400, showCover:true, flippingMode:'hard' });
           pageFlip.loadFromHTML(flipRef.current.querySelectorAll('.flip-page'));
           flip.current = pageFlip;
         }
         return () => { if (flip.current){ flip.current.destroy(); flip.current=null; } };
-      }, [album]);
+      }, [album, unlocked]);
 
       const unlock = () => {
         if (passInput === (album?.albumPassword || '')) {
@@ -817,6 +817,7 @@
       );
     };
 
+    
     /* ------------------ Dashboard + Edit Modal ------------------ */
     const QrCodeDisplay = ({ album }) => {
       const qrRef = useRef(null);
