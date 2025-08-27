@@ -709,40 +709,91 @@
       const [isPlaying, setIsPlaying] = useState(true);
       const [unlocked, setUnlocked] = useState(false);
       const [passInput, setPassInput] = useState('');
+
+      const [needsLandscape, setNeedsLandscape] = useState(false); // ⬅️ NEW
+      const containerRef = useRef(null);   // ⬅️ NEW: size-aware
       const flipRef = useRef(null);
       const flip = useRef(null);
       const audioRef = useRef(null);
 
+      // Detect mobile + portrait => request rotate
       useEffect(() => {
-        const run = async () => {
+        const check = () => {
+          const isMobile = window.innerWidth < 768;
+          const isPortrait = window.matchMedia('(orientation: portrait)').matches;
+          setNeedsLandscape(isMobile && isPortrait);
+        };
+        check();
+        window.addEventListener('resize', check);
+        window.addEventListener('orientationchange', check);
+        return () => {
+          window.removeEventListener('resize', check);
+          window.removeEventListener('orientationchange', check);
+        };
+      }, []);
+
+      useEffect(() => {
+        (async () => {
           try {
             const ref = doc(db,'albums', albumId);
             const snap = await getDoc(ref);
             if (!snap.exists()) { setError('Album not found.'); return; }
             const data = snap.data();
-            setAlbum(data);
+            setAlbum({ id: albumId, ...data });
             updateDoc(ref, { views: increment(1) }).catch(()=>{});
             const key = `album-${albumId}-ok`;
             if (!data.passwordProtected || sessionStorage.getItem(key)==='1') setUnlocked(true);
           } catch (e) { console.error(e); setError('Failed to load album.'); }
           finally { setLoading(false); }
-        };
-        run();
+        })();
       }, [albumId]);
 
+      // ⬅️ UPDATED: init/re-init PageFlip when album is ready, unlocked, and landscape (or desktop)
+      const initFlip = () => {
+        if (!flipRef.current) return;
+        if (flip.current) { flip.current.destroy(); flip.current = null; }
+
+        // Compute responsive size
+        const vw = Math.min(window.innerWidth, document.documentElement.clientWidth || window.innerWidth);
+        const vh = Math.min(window.innerHeight, document.documentElement.clientHeight || window.innerHeight);
+        // aim for wide double spread; keep aspect
+        const width = Math.min(1200, Math.floor(vw * 0.95));
+        const height = Math.min(680, Math.floor(vh * 0.70));
+
+        const pageFlip = new St.PageFlip(flipRef.current, {
+          width: Math.max(500, width),      // base width
+          height: Math.max(360, height),    // base height
+          size: "stretch",                  // ⬅️ allow stretch
+          maxShadowOpacity: 0.3,
+          showCover: true,
+          usePortrait: false,               // ⬅️ FORCE double-page even on small screens in landscape
+          flippingMode: 'hard',
+          autoSize: true                    // ⬅️ keep responsive
+        });
+
+        pageFlip.loadFromHTML(flipRef.current.querySelectorAll('.flip-page'));
+        flip.current = pageFlip;
+      };
+
+      // Re-init when unlocking / rotating / resizing
       useEffect(() => {
-        if (album && flipRef.current && unlocked) {
-          const pageFlip = new St.PageFlip(flipRef.current, { width:550, height:400, showCover:true, flippingMode:'hard' });
-          pageFlip.loadFromHTML(flipRef.current.querySelectorAll('.flip-page'));
-          flip.current = pageFlip;
-        }
-        return () => { if (flip.current){ flip.current.destroy(); flip.current=null; } };
-      }, [album, unlocked]);
+        if (!album || !unlocked || needsLandscape) return;
+        // Allow DOM to paint before init
+        const id = setTimeout(initFlip, 50);
+        return () => clearTimeout(id);
+      }, [album, unlocked, needsLandscape]);
+
+      useEffect(() => {
+        const onResize = () => { if (album && unlocked && !needsLandscape) initFlip(); };
+        window.addEventListener('resize', onResize);
+        return () => window.removeEventListener('resize', onResize);
+      }, [album, unlocked, needsLandscape]);
 
       const unlock = () => {
         if (passInput === (album?.albumPassword || '')) {
           setUnlocked(true);
           sessionStorage.setItem(`album-${albumId}-ok`, '1');
+          // Flipbook will initialize via the effect
         } else { alert('Incorrect password.'); }
       };
 
@@ -751,42 +802,62 @@
       if (!album) return null;
 
       return (
-        <div className="min-h-screen flex flex-col items-center justify-center p-4 fade-in">
+        <div className="min-h-screen flex flex-col items-center justify-start sm:justify-center p-3 sm:p-4 fade-in">
           {album.musicUrl && (
             <>
               <audio ref={audioRef} src={album.musicUrl} autoPlay loop/>
-              <button onClick={()=>{ if(isPlaying) audioRef.current.pause(); else audioRef.current.play(); setIsPlaying(p=>!p); }}
-                      className="fixed bottom-6 right-6 bg-indigo-600 text-white p-3 rounded-full floating-btn">
+              <button
+                onClick={()=>{ if(isPlaying && audioRef.current) audioRef.current.pause(); else if(audioRef.current) audioRef.current.play(); setIsPlaying(p=>!p); }}
+                className="fixed bottom-6 right-6 bg-indigo-600 text-white p-3 rounded-full floating-btn"
+                aria-label="Toggle music"
+              >
                 <MaterialIcon name={isPlaying?'volume_up':'volume_off'}/>
               </button>
             </>
           )}
 
-          <header className="text-center mb-6">
-            <h1 className="text-3xl md:text-4xl font-bold tracking-tight">{album.title}</h1>
+          <header className="text-center mb-3 sm:mb-6">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold tracking-tight">{album.title}</h1>
             {album.showLabName && album.labName && (
-              <p className="text-slate-500 mt-1">by <span className="font-semibold">{album.labName}</span></p>
+              <p className="text-slate-500 mt-1 text-sm sm:text-base">by <span className="font-semibold">{album.labName}</span></p>
             )}
             <a href={window.location.origin + window.location.pathname}
-               className="mt-2 inline-block text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-800 transition-colors">
+               className="mt-2 inline-block text-indigo-600 dark:text-indigo-400 font-semibold hover:text-indigo-800 transition-colors text-sm sm:text-base">
               Create your own album →
             </a>
           </header>
 
+          {/* ⬅️ NEW: Landscape prompt on phones */}
+          {needsLandscape && (
+            <div className="rotate-overlay">
+              <div className="rotate-box">
+                <div className="mx-auto mb-3 w-16 h-16 rounded-2xl bg-indigo-600 text-white grid place-items-center">
+                  <MaterialIcon name="screen_rotation"/>
+                </div>
+                <h3 className="text-xl font-bold mb-1">Rotate your device</h3>
+                <p className="text-slate-500 mb-4">For the best experience, please view this e-album in <strong>landscape</strong> mode.</p>
+                <button
+                  onClick={()=>{ /* re-check immediately */ window.dispatchEvent(new Event('resize')); }}
+                  className="bg-indigo-600 text-white px-4 py-2 rounded-lg"
+                >I’ve rotated</button>
+              </div>
+            </div>
+          )}
+
           {album.passwordProtected && !unlocked ? (
-            <div className="w-full max-w-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-xl">
+            <div className="w-full max-w-md bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl p-6 shadow-xl mobile-card">
               <h3 className="text-xl font-semibold mb-2">This album is protected</h3>
               <p className="text-sm text-slate-500 mb-4">Enter the password to view.</p>
               <input type="password" value={passInput} onChange={e=>setPassInput(e.target.value)} placeholder="Album password"
                      className="w-full p-3 border rounded-lg bg-transparent"/>
-              <button onClick={unlock} className="w-full mt-3 bg-indigo-600 text-white py-3 rounded-lg font-semibold">Unlock</button>
+              <button onClick={unlock} className="w-full mt-3 bg-indigo-600 text-white py-3 rounded-lg font-semibold mobile-btn">Unlock</button>
             </div>
           ) : (
             <>
-              <div className="flipbook-container">
-                <div ref={flipRef}>
+              <div ref={containerRef} className="flipbook-wrap w-full">
+                <div className="flipbook-container" ref={flipRef}>
                   <div className="flip-page cover-page" data-density="hard">
-                    {album.frontCoverUrl ? <img src={album.frontCoverUrl}/> : <h2 className="text-2xl font-bold">{album.title}</h2>}
+                    {album.frontCoverUrl ? <img src={album.frontCoverUrl} alt="Front cover"/> : <h2 className="text-2xl font-bold">{album.title}</h2>}
                   </div>
                   {album.imageUrls.map((url,i)=>(
                     <div key={i} className="flip-page">
@@ -794,21 +865,24 @@
                     </div>
                   ))}
                   <div className="flip-page cover-page" data-density="hard">
-                    {album.backCoverUrl ? <img src={album.backCoverUrl}/> : <h2 className="text-xl">The End</h2>}
+                    {album.backCoverUrl ? <img src={album.backCoverUrl} alt="Back cover"/> : <h2 className="text-xl">The End</h2>}
                   </div>
                 </div>
               </div>
-              <div className="flex items-center gap-4 mt-4">
-                <button onClick={()=>flip.current && flip.current.flipPrev()} className="bg-white dark:bg-slate-700 p-3 rounded-full shadow-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition"><MaterialIcon name="arrow_back"/></button>
-                <span className="text-slate-600 dark:text-slate-300 font-medium">Turn Page</span>
-                <button onClick={()=>flip.current && flip.current.flipNext()} className="bg-white dark:bg-slate-700 p-3 rounded-full shadow-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition"><MaterialIcon name="arrow_forward"/></button>
-              </div>
+
+              {!needsLandscape && (
+                <div className="flex items-center gap-3 sm:gap-4 mt-3 sm:mt-4">
+                  <button onClick={()=>flip.current && flip.current.flipPrev()} className="bg-white dark:bg-slate-700 p-3 rounded-full shadow-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition" aria-label="Previous page"><MaterialIcon name="arrow_back"/></button>
+                  <span className="text-slate-600 dark:text-slate-300 font-medium text-sm sm:text-base">Turn Page</span>
+                  <button onClick={()=>flip.current && flip.current.flipNext()} className="bg-white dark:bg-slate-700 p-3 rounded-full shadow-lg hover:bg-slate-100 dark:hover:bg-slate-600 transition" aria-label="Next page"><MaterialIcon name="arrow_forward"/></button>
+                </div>
+              )}
 
               {album.social && (album.social.instagram || album.social.whatsapp || album.social.facebook) && (
-                <div className="mt-6 flex items-center gap-3">
-                  {album.social.instagram && <a href={album.social.instagram} target="_blank" rel="noopener" className="px-3 py-2 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"><MaterialIcon name="photo_camera"/> Instagram</a>}
-                  {album.social.whatsapp && <a href={album.social.whatsapp} target="_blank" rel="noopener" className="px-3 py-2 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"><MaterialIcon name="whatsapp"/> WhatsApp</a>}
-                  {album.social.facebook && <a href={album.social.facebook} target="_blank" rel="noopener" className="px-3 py-2 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2"><MaterialIcon name="facebook"/> Facebook</a>}
+                <div className="mt-5 sm:mt-6 flex items-center gap-2 sm:gap-3">
+                  {album.social.instagram && <a href={album.social.instagram} target="_blank" rel="noopener" className="px-3 py-2 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-sm sm:text-base"><MaterialIcon name="photo_camera"/> Instagram</a>}
+                  {album.social.whatsapp && <a href={album.social.whatsapp} target="_blank" rel="noopener" className="px-3 py-2 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-sm sm:text-base"><MaterialIcon name="whatsapp"/> WhatsApp</a>}
+                  {album.social.facebook && <a href={album.social.facebook} target="_blank" rel="noopener" className="px-3 py-2 rounded-lg border hover:bg-slate-50 dark:hover:bg-slate-700 flex items-center gap-2 text-sm sm:text-base"><MaterialIcon name="facebook"/> Facebook</a>}
                 </div>
               )}
             </>
@@ -817,7 +891,7 @@
       );
     };
 
-    
+
     /* ------------------ Dashboard + Edit Modal ------------------ */
     const QrCodeDisplay = ({ album }) => {
       const qrRef = useRef(null);
