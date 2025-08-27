@@ -1,8 +1,0 @@
-{
-  "name": "e-album",
-  "version": "1.0.0",
-  "private": true,
-  "dependencies": {
-    "paytmchecksum": "^1.5.0"
-  }
-}
